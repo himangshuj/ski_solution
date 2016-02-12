@@ -1,7 +1,8 @@
 (ns ski-solution.core
   (:require [clojure.java.io :as io]
             [clojure.string :as string])
-  (:import java.util.PriorityQueue))
+  (:import java.util.PriorityQueue)
+  (:gen-class))
 
 (defn SkiGrid->map [skigrid-obj]
   {:val (.val skigrid-obj)
@@ -106,12 +107,15 @@
 ;; and final tiebreaker the elevation at path1 is more than elevation at path2
 
 (defn -main []
-  (let [input-data (read-file "input1.txt")
+  (let [input-data (read-file "map.txt")
         input-data# (-> input-data :data flatten)
         input-data# (reduce #(merge %1 {{:row (.row %2) :column (.column %2)} %2 } ) {} input-data#)
         _ (println "made data into map")
         priority-queue  (PriorityQueue. (count input-data#) node-comparator )
-        _ (. priority-queue (addAll (vals input-data#) ))]  ;;side effect programming to get the top guy in priority queue
+        _ (. priority-queue (addAll (vals input-data#) ))
+        result-pq (PriorityQueue. (count input-data#) node-comparator )
+        _ (println "made data into pq")
+        ]  ;;side effect programming to get the top guy in priority queue
     (loop [edge-key (get-ski-cordinates (. priority-queue (poll)) )
            graph input-data#
            iteration 1] ;;initial-value
@@ -127,8 +131,11 @@
             _ (doto priority-queue
                 (.removeAll nodes-modified-org)
                 (.addAll nodes-modified))
-            _ (println "nodes removed " nodes-modified-org)
-            _ (println "pq " priority-queue)
+            _ (doto result-pq
+                (.remove edge-to-propagate)
+                (.add (new-graph edge-key)))
+            ;_ (println "pq size " (count priority-queue))
+            _ (println "result pq top " (. result-pq (peek)))
             _ (println "\n------------------------------\n")]
         (if-let [new-edge (. priority-queue (poll))]
           (recur
@@ -136,6 +143,5 @@
             new-graph
             (+ 1 iteration))
           (do
-            (. priority-queue (addAll (vals new-graph) ))
             (println
-              (. priority-queue (poll) ))))))))
+              (. result-pq (poll) ))))))))
