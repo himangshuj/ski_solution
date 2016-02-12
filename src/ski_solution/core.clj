@@ -5,7 +5,9 @@
   (:gen-class))
 
 
-(defrecord SkiGrid [val start-val row column hops propagated])
+(defrecord SkiGrid [val start-val row column hops propagated]
+  Object
+  (toString [skigrid] (pr-str skigrid)))
 
 (defn- get-ski-cordinates [node]
   (select-keys node [:row :column]))
@@ -36,7 +38,8 @@
          (or
            (> (:hops node-src) (:hops node-sink))
            (and (= (:hops node-src) (:hops node-sink)) (> (:start-val node-src) (:start-val node-sink)))
-           )) (merge node-sink {:start-val (node-src :start-val) :hops (+ (:hops node-src) 1 ) :propagated false })))
+           )) (assoc node-sink :start-val (:start-val node-src) :hops (+ (:hops node-src) 1 ) :propagated false )
+              node-sink))
 
 
 
@@ -53,11 +56,12 @@
         west# (propagate-edge node west)
         neighbor-nodes [north#  south# east# west#]
         neighbor-nodes# (remove nil? neighbor-nodes)
-        _ (println neighbor-nodes#)
         graph# (reduce #(assoc %1  (get-ski-cordinates %2 ) %2 ) graph neighbor-nodes#)
         node# (merge node {:propagated true})
         graph# (assoc graph# (get-ski-cordinates node# ) (map->SkiGrid node#))]
-    {:graph graph# :nodes-modified neighbor-nodes#}  ))
+    {:graph graph#
+     :nodes-modified neighbor-nodes#
+     :nodes-modified-org (remove nil? [north east south west])}  ))
 
 (def node-comparator
   (fn [node1 node2]
@@ -92,24 +96,34 @@
       (let [ ;;removes one element from the priority queue
             edge-to-propagate (graph edge-key)
             {new-graph :graph
-             nodes-modified :nodes-modified} (propagate-node edge-to-propagate graph)
+             nodes-modified :nodes-modified
+             nodes-modified-org :nodes-modified-org} (propagate-node edge-to-propagate graph)
             _ (println "\n------------------------------\n")
             _ (println "iteration " iteration)
             _ (println edge-to-propagate)
             _ (println "\n------------------------------ Before \n" priority-queue )
-            _ (doto priority-queue
-                (.removeAll nodes-modified)
-                (.addAll nodes-modified))
+            _ (println "\n nodes modified:" nodes-modified)
+            _ (println "nodes modified" (count priority-queue))
+            _ (. priority-queue (removeAll nodes-modified-org))
+
+            _ (println "\n------------------------------ During \n" priority-queue )
+
+            _ (doseq [node nodes-modified]
+                (. priority-queue (add node))
+                (println "\n node :" node)
+                (println "\n------------------------------ During loop \n" priority-queue ))
             _ (if (empty? nodes-modified)
                 (doto result-pq
                   (.remove edge-to-propagate)
                   (.add (new-graph edge-key))))
             _ (println "\n------------------------------ After \n" priority-queue )
+            _ (println "nodes modified" (count priority-queue))
 
             ;_ (println "pq size " (count priority-queue))
             _ (println "result pq top " (. result-pq (peek)))
             _ (println "\n------------------------------\n")]
-        (if-let [new-edge (. priority-queue (poll))]
+        (if-let [new-edge (if (< iteration 1)
+                            (. priority-queue (poll))) ]
           (recur
             (get-ski-cordinates new-edge)
             new-graph
