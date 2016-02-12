@@ -7,7 +7,7 @@
 
 (defrecord SkiGrid [val start-val row column hops propagated]
   Object
-  (toString [skigrid] (pr-str skigrid)))
+  (toString [skigrid] (str (pr-str skigrid) "  heuristic " (+ (:val skigrid) (:hops skigrid)) ) ))
 
 (defn- get-ski-cordinates [node]
   (select-keys node [:row :column]))
@@ -39,7 +39,7 @@
            (> (:hops node-src) (:hops node-sink))
            (and (= (:hops node-src) (:hops node-sink)) (> (:start-val node-src) (:start-val node-sink)))
            )) (assoc node-sink :start-val (:start-val node-src) :hops (+ (:hops node-src) 1 ) :propagated false )
-              node-sink))
+              nil))
 
 
 
@@ -56,12 +56,17 @@
         west# (propagate-edge node west)
         neighbor-nodes [north#  south# east# west#]
         neighbor-nodes# (remove nil? neighbor-nodes)
+        original-nodes-modified [(if north# north)
+                                 (if south# south)
+                                 (if west# west)
+                                 (if east# east)]
+        original-nodes-modified# (remove nil? original-nodes-modified)
         graph# (reduce #(assoc %1  (get-ski-cordinates %2 ) %2 ) graph neighbor-nodes#)
         node# (merge node {:propagated true})
         graph# (assoc graph# (get-ski-cordinates node# ) (map->SkiGrid node#))]
     {:graph graph#
      :nodes-modified neighbor-nodes#
-     :nodes-modified-org (remove nil? [north east south west])}  ))
+     :nodes-modified-org original-nodes-modified#}  ))
 
 (def node-comparator
   (fn [node1 node2]
@@ -70,6 +75,15 @@
       (or
         (> heuristic1 heuristic2)
         (and (= heuristic1 heuristic2)
+             (> (- (.start-val node1) (.val node1)) (- (.start-val node2) (.val node2))))))))
+
+(def node-comparator-real
+  (fn [node1 node2]
+    (let [hops1 (+ (.hops node1) )
+          hops2 (+ (.hops node2) )]
+      (or
+        (> hops1 hops2)
+        (and (= hops1 hops2)
              (> (- (.start-val node1) (.val node1)) (- (.start-val node2) (.val node2))))))))
 
 
@@ -87,7 +101,7 @@
         _ (println "made data into map")
         priority-queue  (PriorityQueue. (count input-data#) node-comparator )
         _ (. priority-queue (addAll (vals input-data#) ))
-        result-pq (PriorityQueue. (count input-data#) node-comparator )
+        result-pq (PriorityQueue. (count input-data#) node-comparator-real )
         _ (println "made data into pq")
         ]  ;;side effect programming to get the top guy in priority queue
     (loop [edge-key (get-ski-cordinates (. priority-queue (poll)) )
@@ -101,29 +115,29 @@
             _ (println "\n------------------------------\n")
             _ (println "iteration " iteration)
             _ (println edge-to-propagate)
-            _ (println "\n------------------------------ Before \n" priority-queue )
-            _ (println "\n nodes modified:" nodes-modified)
-            _ (println "nodes modified" (count priority-queue))
+            _ (println "heuristic" (+ (:val edge-to-propagate)
+                                      (:hops edge-to-propagate)))
+            _ (println "\n------------------------------ Before \n"  )
             _ (. priority-queue (removeAll nodes-modified-org))
-
-            _ (println "\n------------------------------ During \n" priority-queue )
-
-            _ (doseq [node nodes-modified]
-                (. priority-queue (add node))
-                (println "\n node :" node)
-                (println "\n------------------------------ During loop \n" priority-queue ))
+            _ (. priority-queue (addAll nodes-modified))
             _ (if (empty? nodes-modified)
                 (doto result-pq
                   (.remove edge-to-propagate)
                   (.add (new-graph edge-key))))
-            _ (println "\n------------------------------ After \n" priority-queue )
-            _ (println "nodes modified" (count priority-queue))
 
             ;_ (println "pq size " (count priority-queue))
             _ (println "result pq top " (. result-pq (peek)))
-            _ (println "\n------------------------------\n")]
-        (if-let [new-edge (if (< iteration 1)
-                            (. priority-queue (poll))) ]
+            current-leader (. result-pq (peek))
+            _ (println "\n------------------------------\n")
+            new-edge (. priority-queue (poll))
+
+            ]
+        (if (and new-edge
+                 (or
+                   (nil? current-leader)                    ;; there is no current leader
+                   (> (+ (:val new-edge) (:hops new-edge)) (:hops current-leader) ) ;; the heuristic value of new edge is higher than the current leader
+                   (and (= (+ (:val new-edge) (:hops new-edge)) (:hops current-leader) ) ;; the heuristic value is same but there is possibility of greater depth
+                        (> (- (:start-val new-edge) (:val new-edge)) (- (:start-val current-leader) (:val current-leader)) ))))
           (recur
             (get-ski-cordinates new-edge)
             new-graph
