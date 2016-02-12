@@ -95,7 +95,7 @@
 ;; and final tiebreaker the elevation at path1 is more than elevation at path2
 
 (defn -main []
-  (let [input-data (read-file "input1.txt")
+  (let [input-data (read-file "input2.txt")
         input-data# (-> input-data :data flatten)
         input-data# (reduce #(merge %1 {{:row (.row %2) :column (.column %2)} %2 } ) {} input-data#)
         _ (println "made data into map")
