@@ -12,6 +12,9 @@
 (defn- get-ski-cordinates [node]
   (select-keys node [:row :column]))
 
+(defn get-fibonacci-key [node]
+  (* -1 (+ (:val node) (:hops node))))
+
 
 
 (defn- read-file [file-name]
@@ -73,9 +76,8 @@
     (let [heuristic1 (+ (.hops node1) (.val node1))
           heuristic2 (+ (.hops node2) (.val node2))]
       (or
-        (> heuristic1 heuristic2)
-        (and (= heuristic1 heuristic2)
-             (> (- (.start-val node1) (.val node1)) (- (.start-val node2) (.val node2))))))))
+        (> heuristic1 heuristic2)))))
+
 
 (def node-comparator-real
   (fn [node1 node2]
@@ -90,14 +92,15 @@
 
 ;; we first initialize the graph with each node having the elevation stored as val
 ;; hops as 1 and starting elevation as start val which is the same as elevation of the node
-;; now we implement modified djikstra of shortest path path1 is shorter than path2
+;; now we implement modified A* of shortest path path1 is shorter than path2
 ;; if the number of hopes to reach destination node is more or drop is more than through path2
 ;; and final tiebreaker the elevation at path1 is more than elevation at path2
+;; for heuristics, the number of hops at each node is set as the elevation
 
 (defn -main []
-  (let [input-data (read-file "input2.txt")
+  (let [input-data (read-file "map.txt")
         input-data# (-> input-data :data flatten)
-        input-data# (reduce #(merge %1 {{:row (.row %2) :column (.column %2)} %2 } ) {} input-data#)
+        input-data# (reduce #(merge %1 {{:row (.row %2) :column (.column %2)} %2 } ) {} input-data#) ;;find it easier to replace the value of node in place
         _ (println "made data into map")
         priority-queue  (PriorityQueue. (count input-data#) node-comparator )
         _ (. priority-queue (addAll (vals input-data#) ))
@@ -112,12 +115,8 @@
             {new-graph :graph
              nodes-modified :nodes-modified
              nodes-modified-org :nodes-modified-org} (propagate-node edge-to-propagate graph)
-            _ (println "\n------------------------------\n")
-            _ (println "iteration " iteration)
-            _ (println edge-to-propagate)
-            _ (println "heuristic" (+ (:val edge-to-propagate)
-                                      (:hops edge-to-propagate)))
-            _ (println "\n------------------------------ Before \n"  )
+
+
             _ (. priority-queue (removeAll nodes-modified-org))
             _ (. priority-queue (addAll nodes-modified))
             _ (if (empty? nodes-modified)
@@ -125,10 +124,14 @@
                   (.remove edge-to-propagate)
                   (.add (new-graph edge-key))))
 
+            _ (if (= 0 (mod iteration 500))
+                (do
+                  (println "iteration " iteration)
+                  (println edge-to-propagate)
+                  (println "result pq top " (. result-pq (peek)))))
+
             ;_ (println "pq size " (count priority-queue))
-            _ (println "result pq top " (. result-pq (peek)))
             current-leader (. result-pq (peek))
-            _ (println "\n------------------------------\n")
             new-edge (. priority-queue (poll))
 
             ]

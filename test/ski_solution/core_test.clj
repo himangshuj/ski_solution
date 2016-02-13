@@ -1,7 +1,9 @@
 (ns ski-solution.core-test
   (:require [clojure.test :refer :all]
             [ski-solution.core :refer :all])
-  (:import [java.util PriorityQueue Collections]))
+  (:import [java.util PriorityQueue]
+           [org.jgrapht.util FibonacciHeapNode FibonacciHeap])
+  (:refer-clojure :exclude [peek]))
 
 (def vals (map
             map->SkiGrid
@@ -19,7 +21,8 @@
     (let [pq          (PriorityQueue. node-comparator)
           _           (. pq (addAll vals))
           vals-sorted (sort node-comparator vals)]
-      (are [x y] (= x y)
+      (are [x y] (= (select-keys x [:val :hops])
+                    (select-keys  y [:val :hops]))
                  (first vals-sorted) (map->SkiGrid {:start-val 9, :val 9, :hops 1, :column 2, :propagated false, :row 1})
                  (first vals-sorted) (. pq (poll))
                  (second vals-sorted) (. pq (poll))
@@ -47,8 +50,8 @@
 
           _           (. pq (addAll queue-list))
           queue-list# (sort node-comparator queue-list)]
-      (are [x y] (= (select-keys x [:val :start-val :hops])
-                    (select-keys y [:val :start-val :hops]))
+      (are [x y] (= (select-keys x [:val :hops])
+                    (select-keys  y [:val :hops]))
                  (nth queue-list# 0) (. pq (poll))
                  (nth queue-list# 1) (. pq (poll))
                  (nth queue-list# 2) (. pq (poll))
@@ -61,4 +64,45 @@
                  (nth queue-list# 9) (. pq (poll))
                  (nth queue-list# 10) (. pq (poll))
                  (nth queue-list# 11) (. pq (poll))
-                 (nth queue-list# 12) (. pq (poll))))))
+                 (nth queue-list# 12) (. pq (poll)))))
+
+  (testing "fibonanni"
+    (let [queue-list  [(map->SkiGrid {:val 7, :start-val 9, :row 0, :column 2, :hops 2, :propagated false}),
+                       (map->SkiGrid {:val 6, :start-val 6, :row 3, :column 3, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 8, :start-val 8, :row 0, :column 1, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 5, :start-val 5, :row 2, :column 3, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 4, :start-val 4, :row 3, :column 0, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 6, :start-val 6, :row 2, :column 0, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 5, :start-val 9, :row 1, :column 1, :hops 2, :propagated false}),
+                       (map->SkiGrid {:val 4, :start-val 4, :row 0, :column 0, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 1, :start-val 1, :row 3, :column 2, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 2, :start-val 2, :row 1, :column 0, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 3, :start-val 3, :row 0, :column 3, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 3, :start-val 3, :row 2, :column 1, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 2, :start-val 9, :row 2, :column 2, :hops 2, :propagated false}),
+                       (map->SkiGrid {:val 4, :start-val 4, :row 3, :column 1, :hops 1, :propagated false}),
+                       (map->SkiGrid {:val 3, :start-val 9, :row 1, :column 3, :hops 2, :propagated false})]
+          queue-list# (sort node-comparator queue-list)
+          fb (FibonacciHeap. )
+          _ (doseq [node queue-list]
+              (let [node# (FibonacciHeapNode. node)]
+                (. fb (insert node# (get-fibonacci-key node)))))]
+
+      (are [x y] (= (select-keys x [:val  :hops])
+                    (select-keys (. y (getData))  [:val  :hops]))
+                 (nth queue-list# 0) (. fb (removeMin))
+                 (nth queue-list# 1) (. fb (removeMin))
+                 (nth queue-list# 3) (. fb (removeMin))
+                 (nth queue-list# 3) (. fb (removeMin))
+                 (nth queue-list# 4) (. fb (removeMin))
+                 (nth queue-list# 5) (. fb (removeMin))
+                 (nth queue-list# 6) (. fb (removeMin))
+                 (nth queue-list# 7) (. fb (removeMin))
+                 (nth queue-list# 8) (. fb (removeMin))
+                 (nth queue-list# 9) (. fb (removeMin))
+                 (nth queue-list# 10) (. fb (removeMin))
+                 (nth queue-list# 11) (. fb (removeMin))
+                 (nth queue-list# 12) (. fb (removeMin))))))
+
+
+
