@@ -6,7 +6,7 @@
   (:gen-class))
 
 
-(defrecord SkiGrid [val start-val row column hops propagated prev]
+(defrecord SkiGrid [val start-val row column hops propagated prev entry]
   Object
   (toString [skigrid] (str (pr-str skigrid) "  heuristic " (+ (:val skigrid) (:hops skigrid)))))
 (defrecord SkiGridCordinate [row column])
@@ -49,15 +49,15 @@
         (and node-src node-sink)
         (> (:val node-src) (:val node-sink))
         (or
-          (> (:hops node-src) (:hops node-sink))
+          (> (+ 1 (:hops node-src))  (:hops node-sink))
           (and (= (:hops node-src) (:hops node-sink)) (> (:start-val node-src) (:start-val node-sink)))
-          )) (assoc node-sink :start-val (:start-val node-src) :hops (+ (:hops node-src) 1) :propagated false :prev node-src)))
+          )) (assoc node-sink :start-val (:start-val node-src) :hops (+ (:hops node-src) 1) :propagated false :prev (concat [(:val node-src)] (:prev node-src)))))
 
 
 
 (defn- get-node-val [graph ski-cordinates]
   (if-let [node (graph ski-cordinates)]
-    (. node (getValue))))
+    node))
 
 (defn- propagate-node [node graph]
   (let [{row :row column :column} (get-ski-cordinates node)
@@ -71,12 +71,11 @@
         west#           (propagate-edge node west)
         neighbor-nodes  [north# south# east# west#]
         neighbor-nodes# (remove nil? neighbor-nodes)
-        _               (doseq [node neighbor-nodes#]
-                          (let [cordinates (get-ski-cordinates node)
-                                original   (graph cordinates)]
-                            (. original (setValue node))))
-        node#           (merge node {:propagated true})]
-    {:graph          graph
+        graph#          (reduce #(assoc %1 (get-ski-cordinates %2) %2) graph neighbor-nodes#)
+        node#           (dissoc node :entry)
+        graph#          (assoc graph# (get-ski-cordinates node) node#) ;;removing all references to entry
+        ]               ;;fixing memory leak
+    {:graph          graph#
      :nodes-modified neighbor-nodes#}))
 
 (def node-comparator
@@ -99,11 +98,14 @@
 ;; for heuristics, the number of hops at each node is set as the elevation
 
 (defn -main []
-  (let [input-data  (read-file "map.txt")
+  (let [input-data  (read-file "input1.txt")
         input-data# (-> input-data :data flatten)
         fb-heap     (FibonacciHeap.)
         input-data# (reduce #(assoc %1 (map->SkiGridCordinate {:row (.row %2) :column (.column %2)})
-                                       (.. fb-heap (enqueue %2 (get-fibonacci-key %2)))) {} input-data#) ;;find it easier to replace the value of node in place
+                                       (assoc %2 :entry
+                                                 (.. fb-heap
+                                                     (enqueue (map->SkiGridCordinate {:row (.row %2) :column (.column %2)}) (get-fibonacci-key %2)))))
+                            {} input-data#) ;;find it easier to replace the value of node in place
         _           (println "made data into map")
         result-heap (FibonacciHeap.)]                       ;;side effect programming to get the top guy in priority queue
     (println "made data into heap ")
@@ -111,42 +113,40 @@
            graph             input-data#
            iteration         1]                             ;;initial-value
       (let [
-            edge-to-propagate# (. edge-to-propagate (getValue))
+            edge-to-propagate# (graph (. edge-to-propagate (getValue)))
             {new-graph      :graph
              nodes-modified :nodes-modified} (propagate-node edge-to-propagate# graph)
-
-            -                  (println "\n----------------\n")
-            _                  (println "iteration " iteration)
-            _                  (println edge-to-propagate#)
-            _                  (println "nodes modfied" nodes-modified)
-            -                  (println "\n----------------\n")
-
             _                  (doseq [node nodes-modified]
-                                 (. fb-heap (decreaseKey (graph (get-ski-cordinates node))
+                                 (. fb-heap (decreaseKey (:entry node)
                                                          (get-fibonacci-key node)))) ;; only lower vertices can be moved to so this will be always lesser than prev as our keys are all not negative
             _                  (if (empty? nodes-modified)
                                  (do
                                    (doto result-heap
-                                     (.enqueue (. edge-to-propagate (getValue)) (get-result-key edge-to-propagate#))))) ;; the actual-value will change to something lesser even with duplicates i dont care
+                                     (.enqueue edge-to-propagate#
+                                               (get-result-key edge-to-propagate#))))) ;; the actual-value will change to something lesser even with duplicates i dont care
 
             ;_ (println "pq size " (count priority-queue))
             current-leader     (if-let [cl (. result-heap (min))]
                                  (. cl (getValue)))
             new-edge           (. fb-heap (dequeueMin))
-            _                   (println "result heap top " current-leader " comparision " (if current-leader (get-result-key current-leader) ) )
-            _                   (println "new edge is" (. new-edge (getValue)) " comparision" (get-fibonacci-key (. new-edge (getValue)) ))
-
+            _ (println "\n\niteration " iteration)
             ]
         (if (and new-edge
                  (or
                    (nil? current-leader)                    ;; there is no current leader
-                   (< (get-fibonacci-key (. new-edge (getValue)))
+                   (< (get-fibonacci-key (new-graph (. new-edge (getValue))) )
                       (get-result-key current-leader))      ;; the heuristic value of new edge is higher than or equal current leader
                    ))
           (recur
             new-edge
             new-graph
             (+ 1 iteration))
-          (do
-            (println
-              (.. result-heap (dequeueMin) (getValue)))))))))
+          (do (let [result (.. result-heap (dequeueMin) (getValue))
+                    path (concat [(:val result)] (:prev result) )
+                    path# (reverse path)
+                    hops (:hops result)
+                    drop (- (:start-val result) (:val result))]
+                (println "Path " path#)
+                (println "hops" hops)
+                (println "drop " drop)
+                (println (str hops drop "@redmart.com")))))))))
