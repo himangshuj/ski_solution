@@ -166,7 +166,7 @@ public final class FibonacciHeap<T> {
      */
     public Entry<T> min() {
         if (isEmpty())
-            throw new NoSuchElementException("Heap is empty.");
+            return null;
         return mMin;
     }
 
@@ -232,7 +232,7 @@ public final class FibonacciHeap<T> {
     public Entry<T> dequeueMin() {
         /* Check for whether we're empty. */
         if (isEmpty())
-            throw new NoSuchElementException("Heap is empty.");
+            return null;
 
         /* Otherwise, we're about to lose an element, so decrement the number of
          * entries in this heap.
