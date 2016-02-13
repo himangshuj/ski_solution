@@ -1,14 +1,12 @@
 # ski_solution
 
-A Clojure library designed to ... well, that part is up to you.
+A Clojure library designed to find optimal path
 
 ## Usage
 
-FIXME
 
-## License
-
-Copyright © 2016 FIXME
-
-Distributed under the Eclipse Public License either version 1.0 or (at
-your option) any later version.
+```
+lein uberjar
+java -jar 
+java -jar target/ski_solution-0.1.0-SNAPSHOT-standalone.jar
+```

@@ -1,7 +1,8 @@
 (ns ski-solution.core
   (:require [clojure.java.io :as io]
             [clojure.string :as string])
-  (:import [ski_solution.util FibonacciHeap])
+  (:import [ski_solution.util FibonacciHeap]
+           (java.util Date))
   (:refer-clojure :exclude [min])
   (:gen-class))
 
@@ -106,9 +107,8 @@
                                                  (.. fb-heap
                                                      (enqueue (map->SkiGridCordinate {:row (.row %2) :column (.column %2)}) (get-fibonacci-key %2)))))
                             {} input-data#) ;;find it easier to replace the value of node in place
-        _           (println "made data into map")
+        _           (println "made data into map @" (Date.))
         result-heap (FibonacciHeap.)]                       ;;side effect programming to get the top guy in priority queue
-    (println "made data into heap ")
     (loop [edge-to-propagate (. fb-heap (dequeueMin))
            graph             input-data#
            iteration         1]                             ;;initial-value
@@ -129,7 +129,6 @@
             current-leader     (if-let [cl (. result-heap (min))]
                                  (. cl (getValue)))
             new-edge           (. fb-heap (dequeueMin))
-            _ (println "\n\niteration " iteration)
             ]
         (if (and new-edge
                  (or
@@ -146,7 +145,10 @@
                     path# (reverse path)
                     hops (:hops result)
                     drop (- (:start-val result) (:val result))]
+                (println "iterations" iteration)
+                (println "End time" (Date.))
+                (println "next" (.. result-heap (dequeueMin) (getValue)))
+                (println "Result size" (. result-heap (size)))
                 (println "Path " path#)
                 (println "hops" hops)
-                (println "drop " drop)
-                (println (str hops drop "@redmart.com")))))))))
+                (println "drop " drop))))))))
