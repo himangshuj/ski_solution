@@ -98,7 +98,7 @@
 ;; for heuristics, the number of hops at each node is set as the elevation
 
 (defn -main []
-  (let [input-data  (read-file "input1.txt")
+  (let [input-data  (read-file "map.txt")
         input-data# (-> input-data :data flatten)
         fb-heap     (FibonacciHeap.)
         input-data# (reduce #(assoc %1 (map->SkiGridCordinate {:row (.row %2) :column (.column %2)})
