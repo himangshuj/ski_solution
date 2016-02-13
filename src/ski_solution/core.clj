@@ -51,7 +51,7 @@
         (or
           (> (:hops node-src) (:hops node-sink))
           (and (= (:hops node-src) (:hops node-sink)) (> (:start-val node-src) (:start-val node-sink)))
-          )) (assoc node-sink :start-val (:start-val node-src) :hops (+ (:hops node-src) 1) :propagated false :prev (:val node-src))))
+          )) (assoc node-sink :start-val (:start-val node-src) :hops (+ (:hops node-src) 1) :propagated false :prev node-src)))
 
 
 
@@ -99,7 +99,7 @@
 ;; for heuristics, the number of hops at each node is set as the elevation
 
 (defn -main []
-  (let [input-data  (read-file "input2.txt")
+  (let [input-data  (read-file "map.txt")
         input-data# (-> input-data :data flatten)
         fb-heap     (FibonacciHeap.)
         input-data# (reduce #(assoc %1 (map->SkiGridCordinate {:row (.row %2) :column (.column %2)})
@@ -135,7 +135,7 @@
             new-edge           (. fb-heap (dequeueMin))
             _                   (println "result heap top " current-leader " comparision " (if current-leader (get-result-key current-leader) ) )
             _                   (println "new edge is" (. new-edge (getValue)) " comparision" (get-fibonacci-key (. new-edge (getValue)) ))
-            
+
             ]
         (if (and new-edge
                  (or
