@@ -4,5 +4,5 @@
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :main ski-solution.core
-  :dependencies [[org.clojure/clojure "1.8.0"]
-                 [org.jgrapht/jgrapht-core "0.9.1"]])
+  :java-source-paths ["java-src"]
+  :dependencies [[org.clojure/clojure "1.8.0"]])
